@@ -151,6 +151,9 @@ export class F1CostView {
         const gst = subTotal * 0.10;
         const finalTotal = subTotal + gst;
 
+        // [NEW] (F1/F2 Refactor Phase 2) Dispatch the calculated totals to the central state
+        this.stateService.dispatch(uiActions.setF1CostTotals(subTotal, finalTotal));
+
         this.f1.displays.price['sub-total'].textContent = formatPrice(subTotal);
         this.f1.displays.price.gst.textContent = formatPrice(gst);
         this.f1.displays.price['final-total'].textContent = formatPrice(finalTotal);
