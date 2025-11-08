@@ -14,25 +14,28 @@ export class K5TabInputHandler {
 
     initialize() {
         // This logic was moved from LeftPanelInputHandler's _setupK4Inputs
-        const setupK4Button = (buttonId, mode) => {
+        // [MODIFIED] Renamed function from setupK4... to setupK5...
+        const setupK5Button = (buttonId, mode) => {
             const button = document.getElementById(buttonId);
             if (button) {
-                 button.addEventListener('click', () => {
+                button.addEventListener('click', () => {
                     this.eventAggregator.publish(EVENTS.DUAL_CHAIN_MODE_CHANGED, { mode });
                 });
             }
         };
-        setupK4Button('btn-k4-dual', 'dual');
-        setupK4Button('btn-k4-chain', 'chain');
+        // [MODIFIED] Corrected IDs from 'btn-k4-' to 'btn-k5-'
+        setupK5Button('btn-k5-dual', 'dual');
+        setupK5Button('btn-k5-chain', 'chain');
 
-        const k4Input = document.getElementById('k4-input-display');
-        if (k4Input) {
-            k4Input.addEventListener('keydown', (event) => {
-                 if (event.key === 'Enter') {
+        // [MODIFIED] Corrected ID from 'k4-input-display' to 'k5-input-display'
+        const k5Input = document.getElementById('k5-input-display');
+        if (k5Input) {
+            k5Input.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
                     event.preventDefault();
                     this.eventAggregator.publish(EVENTS.CHAIN_ENTER_PRESSED, {
                         value: event.target.value
-                     });
+                    });
                 }
             });
         }

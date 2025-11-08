@@ -6,10 +6,11 @@
 export class K5TabComponent {
     constructor() {
         // Cache all DOM elements for K5 in the constructor.
-        this.k5DualButton = document.getElementById('btn-k4-dual');
-        this.k5ChainButton = document.getElementById('btn-k4-chain');
-        this.k5InputDisplay = document.getElementById('k4-input-display');
-        this.k5DualPriceValue = document.querySelector('#k4-dual-price-display .price-value');
+        // [MODIFIED] Corrected 'k4-' IDs to 'k5-'
+        this.k5DualButton = document.getElementById('btn-k5-dual');
+        this.k5ChainButton = document.getElementById('btn-k5-chain');
+        this.k5InputDisplay = document.getElementById('k5-input-display');
+        this.k5DualPriceValue = document.querySelector('#k5-dual-price-display .price-value');
         this.k5WinderSummaryDisplay = document.getElementById('k5-display-winder-summary');
         this.k5MotorSummaryDisplay = document.getElementById('k5-display-motor-summary');
         this.k5RemoteSummaryDisplay = document.getElementById('k5-display-remote-summary');
