@@ -122,8 +122,13 @@ export function uiReducer(state, action) {
         case UI_ACTION_TYPES.SET_F1_DISCOUNT_PERCENTAGE:
             return { ...state, f1: { ...state.f1, discountPercentage: action.payload.percentage } };
 
-        // [NEW] (F1/F2 Refactor Phase 1) Handle setting F1 cost totals
+        // [MODIFIED] (F1/F2 Refactor Phase 2 FIX) Handle setting F1 cost totals
         case UI_ACTION_TYPES.SET_F1_COST_TOTALS:
+            // [FIX] Add check to prevent infinite render loop
+            if (state.f1.f1_subTotal === action.payload.subTotal &&
+                state.f1.f1_finalTotal === action.payload.finalTotal) {
+                return state; // No change, break the loop
+            }
             return {
                 ...state,
                 f1: {
@@ -170,7 +175,7 @@ export function uiReducer(state, action) {
                 newF1State.remote_1ch_qty = snapshot.remote_1ch_qty;
             }
             if (snapshot.remote_16ch_qty !== null && snapshot.remote_16ch_qty !== undefined) {
-                newF1State.remote_16ch_qty = snapshot.remote_16ch_qty;
+                newFLEDGLING_STATE.remote_16ch_qty = snapshot.remote_16ch_qty;
             }
             if (snapshot.dual_combo_qty !== null && snapshot.dual_combo_qty !== undefined) {
                 newF1State.dual_combo_qty = snapshot.dual_combo_qty;
