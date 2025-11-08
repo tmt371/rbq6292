@@ -236,36 +236,19 @@ export class CalculationService {
         const f2_17_pre_sum = acceSum + eAcceSum + surchargeFee;
         const sumPrice = disRbPrice + f2_17_pre_sum; // This is the new f2-b22-sumprice
 
-        // --- Start: Replicate F1 Final Total Calculation ---
-        const winderQtyF1 = items.filter(item => item.winder === 'HD').length;
-        const motorQtyF1 = items.filter(item => !!item.motor).length;
-        const totalRemoteQtyF1 = uiState.driveRemoteCount || 0;
-        const remote1chQtyF1 = f1State.remote_1ch_qty;
-        const remote16chQtyF1 = (f1State.remote_16ch_qty === null) ? totalRemoteQtyF1 - remote1chQtyF1 : f1State.remote_16ch_qty;
-        const chargerQtyF1 = uiState.driveChargerCount || 0;
-        const cordQtyF1 = uiState.driveCordCount || 0;
-        const totalDualPairsF1 = Math.floor(items.filter(item => item.dual === 'D').length / 2);
-        const comboQtyF1 = (f1State.dual_combo_qty === null) ? totalDualPairsF1 : f1State.dual_combo_qty;
-        const slimQtyF1 = (f1State.dual_slim_qty === null) ? 0 : f1State.dual_slim_qty;
+        // --- [MODIFIED] (F1/F2 Refactor Phase 3) ---
+        // --- Start: Read F1 Cost Totals from State (Refactored) ---
+        // Read the pre-calculated cost totals directly from the UI state.
+        const f1SubTotal = uiState.f1.f1_subTotal || 0;
+        const f1_final_total = uiState.f1.f1_finalTotal || 0;
+        // --- End: Read F1 Cost Totals from State ---
 
-        const f1ComponentTotal =
-            this.calculateF1ComponentPrice('winder', winderQtyF1) +
-            this.calculateF1ComponentPrice('motor', motorQtyF1) +
-            this.calculateF1ComponentPrice('remote-1ch', remote1chQtyF1) +
-            this.calculateF1ComponentPrice('remote-16ch', remote16chQtyF1) +
-            this.calculateF1ComponentPrice('charger', chargerQtyF1) +
-            this.calculateF1ComponentPrice('3m-cord', cordQtyF1) +
-            this.calculateF1ComponentPrice('dual-combo', comboQtyF1) +
-            this.calculateF1ComponentPrice('slim', slimQtyF1);
-
+        // [MODIFIED] (F1/F2 Refactor Phase 3) We must still calculate f1_rb_price
+        // because it is used for the "RB Profit" calculation.
         const f1DiscountPercentage = f1State.discountPercentage || 0;
         const retailTotalFromF1 = quoteData.products.rollerBlind.summary.totalSum || 0;
         const f1_rb_price = retailTotalFromF1 * (1 - (f1DiscountPercentage / 100));
-
-        const f1SubTotal = f1ComponentTotal + f1_rb_price;
-        const f1Gst = f1SubTotal * 0.10;
-        const f1_final_total = f1SubTotal + f1Gst;
-        // --- End: Replicate F1 Final Total Calculation ---
+        // --- End of modification ---
 
         const rbProfit = disRbPrice - f1_rb_price;
         const validItemCount = items.filter(item => typeof item.linePrice === 'number' && item.linePrice > 0).length;
