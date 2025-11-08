@@ -77,7 +77,7 @@ export class QuoteGeneratorService {
                     setTimeout(() => {
                         try {
                             const inlinedHtml = getInlinedHtml();
-                           
+                            
                             navigator.clipboard.writeText(inlinedHtml)
                                 .then(() => {
                                     alert('HTML with inlined styles copied to clipboard successfully!');
@@ -111,18 +111,17 @@ export class QuoteGeneratorService {
 
             const getInlinedHtmlForGmail = () => {
                 const clone = document.documentElement.cloneNode(true);
-   
-                // --- Ã¤Â¿Â®Ã¦Â­Â£Ã¦Â¨?¢Ã?Ã¨Â¤?¡Ã¨Â?? Ã©? (Phase 3, Step A) ---
+
+                // --- ?Â¤?Â¿?Â®?Â¦?Â­?Â£?Â¦?Â¨?Â¢???Â¨?Â¤?Â¡?Â¨??? ?Â©? (Phase 3, Step A) ---
                 clone.querySelector('title')?.remove();
                 
-                // Ã§Â§Â»Ã©?¢Â?<style> Ã¦Â¨?¢Ã§Â±Â?(GTH Ã¦Â¨Â¡Ã¦ Â¿Ã¦Â¨??Ã¥Â·Â²Ã¥?¦Â??
+                // ?Â§?Â§?Â»?Â©?Â¢??<style> ?Â¦?Â¨?Â¢?Â§?Â±??(GTH ?Â¦?Â¨?Â¡?Â¦ ?Â¿?Â¦?Â¨???Â¥?Â·?Â²?Â¥?Â¦???
                 clone.querySelectorAll('style').forEach(s => s.remove());
-                
-                // Ã§Â§Â»Ã©?¢Â? Ã¤???°Ã???Ã¨?¦Â??
+                // ?Â§?Â§?Â»?Â©?Â¢?? ?Â¤???Â°?????Â¨?Â¦???
                 clone.querySelector('#action-bar')?.remove();
                 clone.querySelectorAll('script').forEach(s => s.remove());
 
-                // Ã¨Â¿? Ã? HTML ??Ã§Â´? Ã???
+                // ?Â¨?Â¿? ?? HTML ???Â§?Â´? ????
                 return {
                     html: '<!DOCTYPE html>' + clone.outerHTML,
                     text: clone.innerText || clone.textContent
@@ -138,9 +137,9 @@ export class QuoteGeneratorService {
                         try {
                             const { html, text } = getInlinedHtmlForGmail();
 
-                         
-                            // --- Ã¤Â¿Â®Ã¦Â­Â£??¹Ã?Ã¨Â²Â¼Ã¤?? Ã©? (Phase 3, Step A) ---
-                            // Ã¥Â¿?¦Ã???Ã¦?Ã¥Â»ÂºÃ§? text/html ??text/plain ?Â©Ã§Â¨Â® Blob
+                            
+                            // --- ?Â¤?Â¿?Â®?Â¦?Â­?Â£??Â¹???Â¨?Â²?Â¼?Â¤?? ?Â©? (Phase 3, Step A) ---
+                            // ?Â¥?Â¿?Â¦?????Â¦??Â¥?Â»?Âº?Â§? text/html ??text/plain ??Â©?Â§?Â¨?Â® Blob
                             navigator.clipboard.write([
                                 new ClipboardItem({
                                     'text/html': new Blob([html], { type: 'text/html' }),
@@ -148,7 +147,7 @@ export class QuoteGeneratorService {
                                 })
                             ]).then(() => {
                                 alert('Quote copied to clipboard (Rich Text)!');
-                             }).catch(err => {
+                            }).catch(err => {
                                 console.error('Failed to copy rich text:', err);
                                 // Fallback to text copy if rich text fails
                                 navigator.clipboard.writeText(text).then(() => {
@@ -173,13 +172,16 @@ export class QuoteGeneratorService {
     <\/script>`;
 
 
-        this._initialize();
+        // [REMOVED] _initialize() is no longer called on construction.
+        // this._initialize(); 
         console.log("QuoteGeneratorService Initialized.");
     }
 
+    // [REMOVED] Original _initialize() logic is moved to _loadTemplates()
     async _initialize() {
+        // This function is now a placeholder, but we keep it
+        // in case the _loadTemplates() call fails, we can re-call it.
         try {
-            // [MODIFIED] (Phase 3, Step B) Load all three templates
             [this.quoteTemplate, this.detailsTemplate, this.gmailTemplate] = await Promise.all([
                 fetch(paths.partials.quoteTemplate).then(res => res.text()),
                 fetch(paths.partials.detailedItemList).then(res => res.text()),
@@ -192,32 +194,49 @@ export class QuoteGeneratorService {
         }
     }
 
+    // [NEW] (Refactor - Lazy Load)
+    // This method ensures templates are loaded, but only fetches them once.
+    async _loadTemplates() {
+        // Check if templates are already loaded.
+        if (this.quoteTemplate && this.detailsTemplate && this.gmailTemplate) {
+            return; // Already loaded, do nothing.
+        }
+
+        // If not loaded, call the original _initialize logic to fetch them.
+        console.log("QuoteGeneratorService: First click detected, fetching templates...");
+        await this._initialize();
+    }
+
+
     /**
      * [NEW] (Phase 3, Step C) Generates the simple HTML for Gmail.
      */
-    generateGmailQuoteHtml(quoteData, ui, f3Data) {
+    async generateGmailQuoteHtml(quoteData, ui, f3Data) {
+        // [NEW] (Refactor - Lazy Load) Ensure templates are loaded before proceeding.
+        await this._loadTemplates();
+
         if (!this.gmailTemplate) {
             console.error("QuoteGeneratorService: Gmail template is not loaded yet.");
             return null;
         }
 
         // 1. Get common data
-        // [MODIFIED v6291] 問題 5: getQuoteTemplateData 現在會返回 ourOffer
+        // [MODIFIED v6291] ? é? 5: getQuoteTemplateData ?¾åœ¨?ƒè???ourOffer
         const templateData = this.calculationService.getQuoteTemplateData(quoteData, ui, f3Data);
 
         // 2. [NEW v6290 Task 2] Conditionally create the GST row HTML
         let gstRowHtml = '';
         if (!templateData.uiState.f2.gstExcluded) {
             gstRowHtml = `
-                <tr>
+                 <tr>
                     <td class="summary-label"
                          style="padding: 8px 0; border: 1px solid #dddddd; font-size: 13.3px; text-align: right; padding-right: 20px; color: #555555;">
                         GST</td>
-                    <td class="summary-value"
+                     <td class="summary-value"
                          style="padding: 8px 0; border: 1px solid #dddddd; font-size: 13.3px; text-align: right; font-weight: 500; padding-right: 10px;">
                         ${templateData.gst}</td>
                 </tr>
-            `; // [FIX v6291] 移除了錯誤的反斜線 `\`
+            `; // [FIX v6291] ç§»é™¤äº†éŒ¯èª¤ç?? æ?ç·?`\`
         }
 
         // 3. Populate the GTH template
@@ -227,7 +246,7 @@ export class QuoteGeneratorService {
             total: templateData.grandTotal,
             deposit: templateData.deposit,
             balance: templateData.balance,
-            ourOffer: templateData.ourOffer, // [FIX v6291] 問題 5: 確保 ourOffer 被傳遞
+            ourOffer: templateData.ourOffer, // [FIX v6291] ? é? 5: ç¢ºä? ourOffer è¢«å‚³??
 
             // Ensure customer info is formatted
             customerInfoHtml: this._formatCustomerInfo(templateData),
@@ -254,21 +273,24 @@ export class QuoteGeneratorService {
     /**
      * Generates the full HTML for PDF/Print.
      */
-    generateQuoteHtml(quoteData, ui, f3Data) {
+    async generateQuoteHtml(quoteData, ui, f3Data) {
+        // [NEW] (Refactor - Lazy Load) Ensure templates are loaded before proceeding.
+        await this._loadTemplates();
+
         if (!this.quoteTemplate || !this.detailsTemplate) {
             console.error("QuoteGeneratorService: Templates are not loaded yet.");
             return null;
         }
 
         // 1. Delegate all data preparation to CalculationService.
-        // [MODIFIED v6291] 問題 5: getQuoteTemplateData 現在會返回 ourOffer
+        // [MODIFIED v6291] ? é? 5: getQuoteTemplateData ?¾åœ¨?ƒè???ourOffer
         const templateData = this.calculationService.getQuoteTemplateData(quoteData, ui, f3Data);
 
         // 2. [NEW v6290 Task 2] Conditionally create the GST row HTML for the *Original Table*
         let gstRowHtml = '';
         if (!templateData.uiState.f2.gstExcluded) {
             gstRowHtml = `
-                <tr> 
+                 <tr> 
                     <td class="summary-label">GST (10%)</td> 
                     <td class="summary-value">${templateData.gst}</td>
                 </tr>
@@ -280,7 +302,7 @@ export class QuoteGeneratorService {
             ...templateData,
             customerInfoHtml: this._formatCustomerInfo(templateData),
             // [MODIFIED v6290 Task 1] Use the single-table generator
-            // [FIX v6291] (問題 1, 2) 此函式現在只返回 <tr>...</tr>
+            // [FIX v6291] (? é? 1, 2) æ­¤å‡½å¼ ç ¾?¨å ªè¿”å? <tr>...</tr>
             itemsTableBody: this._generatePageOneItemsTableHtml_Original(templateData),
             rollerBlindsTable: this._generateItemsTableHtml(templateData),
             gstRowHtml: gstRowHtml // [NEW] Pass the conditional GST row
@@ -331,7 +353,7 @@ export class QuoteGeneratorService {
             if (key === 'total') return data.grandTotal;
             if (key === 'deposit') return data.deposit;
             if (key === 'balance') return data.balance;
-            // [NEW v6291] 問題 5: 增加 ourOffer 的 fallback
+            // [NEW v6291] ? é? 5: å¢žå? ourOffer ??fallback
             if (key === 'ourOffer') return data.ourOffer;
 
             return match; // Keep original placeholder if key not found
@@ -378,7 +400,7 @@ export class QuoteGeneratorService {
                     cell('F-NAME', item.fabric || '', fabricClass),
                     cell('F-COLOR', item.color || '', fabricClass),
                     cell('Location', item.location || ''),
-                    // [FIX v6291] (手機 PDF 問題 2) 修正亂碼 "?? " 為 "Y"
+                    // [FIX v6291] (?‹æ? PDF ? é? 2) ä¿®æ­£äº‚ç¢¼ "?? " ??"Y"
                     cell('HD', item.winder === 'HD' ? 'Y' : '', 'text-center'),
                     cell('Dual', item.dual === 'D' ? 'Y' : '', 'text-center'),
                     cell('Motor', item.motor ? 'Y' : '', 'text-center'),
@@ -416,25 +438,25 @@ export class QuoteGeneratorService {
         const validItemCount = items.filter(i => i.width && i.height).length;
 
         const createRow = (number, description, qty, price, discountedPrice, isExcluded = false) => {
-            // [FIX v6291] 問題 3: 如果 Price 被排除，Discounted Price 應為 0
+            // [FIX v6291] ? é? 3: å¦‚æ? Price è¢«æ??¤ï?Discounted Price ?‰ç‚º 0
             const discountedPriceValue = isExcluded ? 0 : discountedPrice;
             const isDiscounted = discountedPriceValue < price;
 
-            // [FIX v6291] (手機 PDF 問題 1.2, 1.3, 1.4) 實作新的顏色/樣式邏輯
-            let priceStyle = 'style="color: #333;"'; // (1.3) 預設 Price 為黑色
-            // (1.3) 預設 Discounted Price 為黑色 (CSS 會使其變紅，這裡的 style 用於覆蓋)
+            // [FIX v6291] (?‹æ? PDF ? é? 1.2, 1.3, 1.4) å¯¦ä??°ç?é¡ è‰²/æ¨??? è¼¯
+            let priceStyle = 'style="color: #333;"'; // (1.3) ? è¨­ Price ?ºé???
+            // (1.3) ? è¨­ Discounted Price ?ºé???(CSS ?ƒä½¿?¶è?ç´…ï??™è£¡??style ?¨æ–¼è¦†è?)
             let discountedPriceStyle = 'style="color: #333;"';
 
             if (isExcluded) {
-                // (1.4) Price: 灰色刪除線, Discounted: 紅色 (金額為 0)
+                // (1.4) Price: ?°è‰²?ªé™¤ç·? Discounted: ç´…è‰² (?‘é???0)
                 priceStyle = 'style="text-decoration: line-through; color: #999999;"';
                 discountedPriceStyle = 'style="color: #d32f2f;"';
             } else if (isDiscounted) {
-                // (1.2) Price: 灰色, Discounted: 紅色
+                // (1.2) Price: ?°è‰², Discounted: ç´…è‰²
                 priceStyle = 'style="color: #999999;"';
-                discountedPriceStyle = 'style="color: #d32f2f;"'; // 保持紅色 (CSS 預設)
+                discountedPriceStyle = 'style="color: #d32f2f;"'; // ä¿ æ?ç´…è‰² (CSS ? è¨­)
             }
-            // (1.3) 的情況 (isExcluded = false 且 isDiscounted = false) 已在預設值中處理 (兩者皆為黑色)
+            // (1.3) ?„æ?æ³?(isExcluded = false ä¸?isDiscounted = false) å·²åœ¨? è¨­?¼ä¸­?•ç? (?©è€…ç??ºé???
 
             return `
                 <tr>
@@ -460,11 +482,11 @@ export class QuoteGeneratorService {
             validItemCount,
             summaryData.firstRbPrice || 0,
             summaryData.disRbPrice || 0,
-            false // 確保 Roller Blinds Price 欄位沒有刪除線 (除非有折扣)
+            false // ç¢ºä? Roller Blinds Price æ¬„ä?æ²’æ??ªé™¤ç·?(?¤é??‰æ???
         ));
 
         // Row 2: Installation Accessories (Optional)
-        // [FIX v6291] 問題 1: 修正 isExcluded 參數，確保 Price 欄位沒有刪除線
+        // [FIX v6291] ? é? 1: ä¿®æ­£ isExcluded ?ƒæ•¸ï¼Œç¢ºä¿?Price æ¬„ä?æ²’æ??ªé™¤ç·?
         if (summaryData.acceSum > 0) {
             rows.push(createRow(
                 itemNumber++,
@@ -472,13 +494,13 @@ export class QuoteGeneratorService {
                 'NA',
                 summaryData.acceSum || 0,
                 summaryData.acceSum || 0,
-                false // 確保此項目 Price 欄位沒有刪除線
+                false // ç¢ºä?æ­¤é???Price æ¬„ä?æ²’æ??ªé™¤ç·?
             ));
         }
 
         // Row 3: Motorised Package (Optional)
-        // [MODIFIED v6291] 問題 2 & 5: 改名
-        // [FIX v6291] 問題 2: 修正 isExcluded 參數，確保 Price 欄位沒有刪除線
+        // [MODIFIED v6291] ? é? 2 & 5: ?¹å?
+        // [FIX v6291] ? é? 2: ä¿®æ­£ isExcluded ?ƒæ•¸ï¼Œç¢ºä¿?Price æ¬„ä?æ²’æ??ªé™¤ç·?
         if (summaryData.eAcceSum > 0) {
             rows.push(createRow(
                 itemNumber++,
@@ -486,12 +508,12 @@ export class QuoteGeneratorService {
                 'NA',
                 summaryData.eAcceSum || 0,
                 summaryData.eAcceSum || 0,
-                false // 確保此項目 Price 欄位沒有刪除線
+                false // ç¢ºä?æ­¤é???Price æ¬„ä?æ²’æ??ªé™¤ç·?
             ));
         }
 
         // Row 4: Delivery
-        // [註] 問題 6: 此處邏輯已正確。isExcluded 會傳入 deliveryExcluded
+        // [è¨»] ? é? 6: æ­¤è?? è¼¯å·²æ­£ç¢ºã€‚isExcluded ?ƒå‚³??deliveryExcluded
         const deliveryExcluded = uiState.f2.deliveryFeeExcluded;
         rows.push(createRow(
             itemNumber++,
@@ -503,7 +525,7 @@ export class QuoteGeneratorService {
         ));
 
         // Row 5: Installation
-        // [註] 問題 7: 此處邏輯已正確。isExcluded 會傳入 installExcluded
+        // [è¨»] ? é? 7: æ­¤è?? è¼¯å·²æ­£ç¢ºã€‚isExcluded ?ƒå‚³??installExcluded
         const installExcluded = uiState.f2.installFeeExcluded;
         rows.push(createRow(
             itemNumber++,
@@ -515,7 +537,7 @@ export class QuoteGeneratorService {
         ));
 
         // Row 6: Removal
-        // [註] 問題 8: 此處邏輯已正確。isExcluded 會傳入 removalExcluded
+        // [è¨»] ? é? 8: æ­¤è?? è¼¯å·²æ­£ç¢ºã€‚isExcluded ?ƒå‚³??removalExcluded
         const removalExcluded = uiState.f2.removalFeeExcluded;
         rows.push(createRow(
             itemNumber++,
@@ -526,10 +548,9 @@ export class QuoteGeneratorService {
             removalExcluded
         ));
 
-        // [FIX v6291] 問題 1, 2: 移除 <table>...</table> 包裹，只返回 <tr>
+        // [FIX v6291] 步驟 1, 2: 移除 <table>...</table> 包裹，只返回 <tr>
         return rows.join('');
     }
-
     // [NEW v6290 Task 1] This is the restored function for GTH
     // It generates MULTIPLE tables (cards)
     _generatePageOneItemsTableHtml_GTH(templateData) {
@@ -539,77 +560,77 @@ export class QuoteGeneratorService {
 
         // [MODIFIED v6290] Use new helper function to build rows
         const createRow = (number, description, qty, price, discountedPrice, isExcluded = false) => {
-            // [FIX v6291] 問題 3: 如果 Price 被排除，Discounted Price 應為 0
+            // [FIX v6291] ? é? 3: å¦‚æ? Price è¢«æ??¤ï?Discounted Price ?‰ç‚º 0
             const discountedPriceValue = isExcluded ? 0 : discountedPrice;
             const isDiscounted = discountedPriceValue < price;
 
-            // [FIX v6291] (手機 PDF 問題 1.2, 1.3, 1.4) 實作新的顏色/樣式邏輯 (GTH 版本)
-            let priceStyle = 'style="color: #333;"'; // (1.3) 預設 Price 為黑色
-            let discountedPriceStyle = 'style="font-weight: bold; color: #333;"'; // (1.3) GTH 預設黑色粗體
+            // [FIX v6291] (?‹æ? PDF ? é? 1.2, 1.3, 1.4) å¯¦ä??°ç?é¡ è‰²/æ¨??? è¼¯ (GTH ?ˆæœ¬)
+            let priceStyle = 'style="color: #333;"'; // (1.3) ? è¨­ Price ?ºé???
+            let discountedPriceStyle = 'style="font-weight: bold; color: #333;"'; // (1.3) GTH ? è¨­é»‘è‰²ç²—é?
 
             if (isExcluded) {
-                // (1.4) Price: 灰色刪除線, Discounted: 紅色
+                // (1.4) Price: ?°è‰²?ªé™¤ç·? Discounted: ç´…è‰²
                 priceStyle = 'style="text-decoration: line-through; color: #999999;"';
                 discountedPriceStyle = 'style="font-weight: bold; color: #d32f2f;"';
             } else if (isDiscounted) {
-                // (1.2) Price: 灰色, Discounted: 紅色
+                // (1.2) Price: ?°è‰², Discounted: ç´…è‰²
                 priceStyle = 'style="color: #999999;"';
                 discountedPriceStyle = 'style="font-weight: bold; color: #d32f2f;"';
             }
-            // (1.3) 情況 (isExcluded = false 且 isDiscounted = false) 已在預設值中處理
+            // (1.3) ?…æ? (isExcluded = false ä¸?isDiscounted = false) å·²åœ¨? è¨­?¼ä¸­?•ç?
 
 
             return `
-                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
-                    style="border-collapse: collapse; margin-bottom: 15px; border: 1px solid #e0e0e0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                    <tbody>
-                        <tr>
-                            <td
-                                style="padding: 10px 15px; border-bottom: 1px solid #e0e0e0; background-color: #1a237e; color: white; border-radius: 4px 4px 0 0;">
-                                <table border="0" cellpadding="0" cellspacing="0" width="100%" style="color: white;">
-                                    <tr>
-                                        <td width="50%" valign="top" style="text-align: left; font-weight: bold;">#${number}</td>
-                                        <td width="50%" valign="top" style="text-align: right; font-weight: normal;">${description}</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 15px; border-bottom: 1px solid #e0e0e0;">
-                                <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                    <tr>
-                                        <td width="50%" valign="top" style="text-align: left; font-weight: 600;">QTY</td>
-                                        <td width="50%" valign="top" style="text-align: right;">${qty}</td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 15px; border-bottom: 1px solid #e0e0e0;">
-                                <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                    <tr>
-                                        <td width="50%" valign="top" style="text-align: left; font-weight: 600;">Price</td>
-                                        <td width="50%" valign="top" style="text-align: right;">
-                                            <span ${priceStyle}>$${price.toFixed(2)}</span>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td style="padding: 10px 15px;">
-                                <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                    <tr>
-                                        <td width="50%" valign="top" style="text-align: left; font-weight: 600;">Discounted Price</td>
-                                        <td width="50%" valign="top" style="text-align: right;">
-                                            <span ${discountedPriceStyle}>$${discountedPriceValue.toFixed(2)}</span>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%"
+                style="border-collapse: collapse; margin-bottom: 15px; border: 1px solid #e0e0e0; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <tbody>
+                    <tr>
+                        <td
+                            style="padding: 10px 15px; border-bottom: 1px solid #e0e0e0; background-color: #1a237e; color: white; border-radius: 4px 4px 0 0;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="color: white;">
+                                <tr>
+                                    <td width="50%" valign="top" style="text-align: left; font-weight: bold;">#${number}</td>
+                                    <td width="50%" valign="top" style="text-align: right; font-weight: normal;">${description}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 15px; border-bottom: 1px solid #e0e0e0;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td width="50%" valign="top" style="text-align: left; font-weight: 600;">QTY</td>
+                                    <td width="50%" valign="top" style="text-align: right;">${qty}</td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 15px; border-bottom: 1px solid #e0e0e0;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td width="50%" valign="top" style="text-align: left; font-weight: 600;">Price</td>
+                                    <td width="50%" valign="top" style="text-align: right;">
+                                        <span ${priceStyle}>$${price.toFixed(2)}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 15px;">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td width="50%" valign="top" style="text-align: left; font-weight: 600;">Discounted Price</td>
+                                    <td width="50%" valign="top" style="text-align: right;">
+                                        <span ${discountedPriceStyle}>$${discountedPriceValue.toFixed(2)}</span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
             `;
         };
 
@@ -622,11 +643,11 @@ export class QuoteGeneratorService {
             validItemCount,
             summaryData.firstRbPrice || 0,
             summaryData.disRbPrice || 0,
-            false // 確保 Roller Blinds Price 欄位沒有刪除線 (除非有折扣)
+            false // ç¢ºä? Roller Blinds Price æ¬„ä?æ²’æ??ªé™¤ç·?(?¤é??‰æ???
         ));
 
         // Row 2: Installation Accessories (Optional)
-        // [FIX v6291] 問題 1: 修正 isExcluded 參數，確保 Price 欄位沒有刪除線
+        // [FIX v6291] ? é? 1: ä¿®æ­£ isExcluded ?ƒæ•¸ï¼Œç¢ºä¿?Price æ¬„ä?æ²’æ??ªé™¤ç·?
         if (summaryData.acceSum > 0) {
             rows.push(createRow(
                 itemNumber++,
@@ -634,13 +655,13 @@ export class QuoteGeneratorService {
                 'NA',
                 summaryData.acceSum || 0,
                 summaryData.acceSum || 0,
-                false // 確保此項目 Price 欄位沒有刪除線
+                false // ç¢ºä?æ­¤é???Price æ¬„ä?æ²’æ??ªé™¤ç·?
             ));
         }
 
         // Row 3: Motorised Accessories (Optional)
-        // [FIX v6291] 問題 2: 修正 isExcluded 參數，確保 Price 欄位沒有刪除線
-        // [MODIFIED v6291] 問題 2: 改名
+        // [FIX v6291] ? é? 2: ä¿®æ­£ isExcluded ?ƒæ•¸ï¼Œç¢ºä¿?Price æ¬„ä?æ²’æ??ªé™¤ç·?
+        // [MODIFIED v6291] ? é? 2: ?¹å?
         if (summaryData.eAcceSum > 0) {
             rows.push(createRow(
                 itemNumber++,
@@ -648,7 +669,7 @@ export class QuoteGeneratorService {
                 'NA',
                 summaryData.eAcceSum || 0,
                 summaryData.eAcceSum || 0,
-                false // 確保此項目 Price 欄位沒有刪除線
+                false // ç¢ºä?æ­¤é???Price æ¬„ä?æ²’æ??ªé™¤ç·?
             ));
         }
 
