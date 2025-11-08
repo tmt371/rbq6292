@@ -14,7 +14,8 @@ export class K4TabInputHandler {
 
     initialize() {
         // This logic was moved from LeftPanelInputHandler's _setupK5Inputs
-        const setupK5ModeButton = (buttonId, mode) => {
+        // [MODIFIED] Renamed function from setupK5... to setupK4...
+        const setupK4ModeButton = (buttonId, mode) => {
             const button = document.getElementById(buttonId);
             if (button) {
                 // [REFACTOR] Removed special handling for the remote button.
@@ -24,13 +25,15 @@ export class K4TabInputHandler {
                 });
             }
         };
-        setupK5ModeButton('btn-k5-winder', 'winder');
-        setupK5ModeButton('btn-k5-motor', 'motor');
-        setupK5ModeButton('btn-k5-remote', 'remote');
-        setupK5ModeButton('btn-k5-charger', 'charger');
-        setupK5ModeButton('btn-k5-3m-cord', 'cord');
+        // [MODIFIED] Corrected all IDs from 'btn-k5-' to 'btn-k4-'
+        setupK4ModeButton('btn-k4-winder', 'winder');
+        setupK4ModeButton('btn-k4-motor', 'motor');
+        setupK4ModeButton('btn-k4-remote', 'remote');
+        setupK4ModeButton('btn-k4-charger', 'charger');
+        setupK4ModeButton('btn-k4-3m-cord', 'cord');
 
-        const setupK5CounterButton = (buttonId, accessory, direction) => {
+        // [MODIFIED] Renamed function from setupK5... to setupK4...
+        const setupK4CounterButton = (buttonId, accessory, direction) => {
             const button = document.getElementById(buttonId);
             if (button) {
                 button.addEventListener('click', () => {
@@ -38,11 +41,12 @@ export class K4TabInputHandler {
                 });
             }
         };
-        setupK5CounterButton('btn-k5-remote-add', 'remote', 'add');
-        setupK5CounterButton('btn-k5-remote-subtract', 'remote', 'subtract');
-        setupK5CounterButton('btn-k5-charger-add', 'charger', 'add');
-        setupK5CounterButton('btn-k5-charger-subtract', 'charger', 'subtract');
-        setupK5CounterButton('btn-k5-cord-add', 'cord', 'add');
-        setupK5CounterButton('btn-k5-cord-subtract', 'cord', 'subtract');
+        // [MODIFIED] Corrected all IDs from 'btn-k5-' to 'btn-k4-'
+        setupK4CounterButton('btn-k4-remote-add', 'remote', 'add');
+        setupK4CounterButton('btn-k4-remote-subtract', 'remote', 'subtract');
+        setupK4CounterButton('btn-k4-charger-add', 'charger', 'add');
+        setupK4CounterButton('btn-k4-charger-subtract', 'charger', 'subtract');
+        setupK4CounterButton('btn-k4-cord-add', 'cord', 'add');
+        setupK4CounterButton('btn-k4-cord-subtract', 'cord', 'subtract');
     }
 }
