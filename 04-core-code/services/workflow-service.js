@@ -30,13 +30,12 @@ export class WorkflowService {
 
     async handlePrintableQuoteRequest() {
         try {
-
-            const { quoteData, ui } = this.stateService.getState(); // [MODIFIED] (Phase 4) Get ui state
-            const f3Data = this._getF3OverrideData();
+            // [MODIFIED] Get state. f3Data (from DOM) is no longer needed.
+            const { quoteData, ui } = this.stateService.getState();
 
             // [REFACTORED] Delegate the entire HTML generation process to the new service.
-            // [MODIFIED] (Phase 4) Pass ui state to the generator
-            const finalHtml = this.quoteGeneratorService.generateQuoteHtml(quoteData, ui, f3Data);
+            // [MODIFIED] Pass the live quoteData object as the f3Data parameter.
+            const finalHtml = this.quoteGeneratorService.generateQuoteHtml(quoteData, ui, quoteData);
 
             if (finalHtml) {
                 // [MODIFIED] Phase 2: Replace the old iframe event with the new window.open mechanism.
@@ -62,12 +61,12 @@ export class WorkflowService {
     // [NEW] (Phase 4, Step 2)
     async handleGmailQuoteRequest() {
         try {
-            const { quoteData, ui } = this.stateService.getState(); // [MODIFIED] (Phase 4) Get ui state
-            const f3Data = this._getF3OverrideData();
+            // [MODIFIED] Get state. f3Data (from DOM) is no longer needed.
+            const { quoteData, ui } = this.stateService.getState();
 
             // Call the new service method for the GTH template
-            // [MODIFIED] (Phase 4) Pass ui state to the generator
-            const finalHtml = this.quoteGeneratorService.generateGmailQuoteHtml(quoteData, ui, f3Data);
+            // [MODIFIED] Pass the live quoteData object as the f3Data parameter.
+            const finalHtml = this.quoteGeneratorService.generateGmailQuoteHtml(quoteData, ui, quoteData);
 
             if (finalHtml) {
                 // Open the generated HTML in a new tab
@@ -88,22 +87,8 @@ export class WorkflowService {
         }
     }
 
-    _getF3OverrideData() {
-        const getValue = (id) => document.getElementById(id)?.value || '';
-        return {
-            quoteId: getValue('f3-quote-id'),
-            issueDate: getValue('f3-issue-date'),
-            dueDate: getValue('f3-due-date'),
-            customerName: getValue('f3-customer-name'),
-            customerAddress: getValue('f3-customer-address'),
-            customerPhone: getValue('f3-customer-phone'),
-            customerEmail: getValue('f3-customer-email'),
-            // [REMOVED] (Phase 4) finalOfferPrice: getValue('f3-final-offer-price'),
-            // [MODIFIED] Add the missing generalNotes field to be collected
-            generalNotes: getValue('f3-general-notes'),
-            termsConditions: getValue('f3-terms-conditions'),
-        };
-    }
+    // [REMOVED] _getF3OverrideData is no longer needed. State is the single source of truth.
+    // _getF3OverrideData() { ... }
 
     // [REMOVED] Methods handleRemoteDistribution and handleDualDistribution have been moved to F1CostView.
 
@@ -114,6 +99,7 @@ export class WorkflowService {
 
         this.stateService.dispatch(quoteActions.setQuoteData(updatedQuoteData));
     }
+
 
     // [REMOVED] All F2-related methods have been moved to F2SummaryView.
 
@@ -138,6 +124,7 @@ export class WorkflowService {
     }
 
     // [MODIFIED v6285 Phase 5] Helper function now captures ALL F1 and F3 state.
+    // [MODIFIED v6292] F3 state is now read directly from quoteData state.
     _getQuoteDataWithSnapshots() {
         const { quoteData, ui } = this.stateService.getState();
         // Create a deep copy to avoid mutating the original state
@@ -154,7 +141,7 @@ export class WorkflowService {
 
             const totalRemoteQty = ui.driveRemoteCount || 0;
             const remote1chQty = ui.f1.remote_1ch_qty;
-            const remote16chQty = (ui.f1.remote_16ch_qty === null) ? totalRemoteQty - remote1chQty : ui.f1.remote_16ch_qty;
+            const remote16chQty = (ui.f1.remote_1ch_qty === null) ? totalRemoteQty - remote1chQty : ui.f1.remote_16ch_qty;
 
             const totalDualPairs = Math.floor(items.filter(item => item.dual === 'D').length / 2);
             const comboQty = (ui.f1.dual_combo_qty === null) ? totalDualPairs : ui.f1.dual_combo_qty;
@@ -170,22 +157,11 @@ export class WorkflowService {
         }
 
         // --- 2. Capture F3 Snapshot (NEW Phase 5) ---
-        // Use the same getValue logic as _getF3OverrideData
-        const getValue = (id) => document.getElementById(id)?.value || '';
-
-        dataWithSnapshot.quoteId = getValue('f3-quote-id');
-        dataWithSnapshot.issueDate = getValue('f3-issue-date');
-        dataWithSnapshot.dueDate = getValue('f3-due-date');
-
-        if (!dataWithSnapshot.customer) {
-            dataWithSnapshot.customer = {};
-        }
-        dataWithSnapshot.customer.name = getValue('f3-customer-name');
-        dataWithSnapshot.customer.address = getValue('f3-customer-address');
-        dataWithSnapshot.customer.phone = getValue('f3-customer-phone');
-        dataWithSnapshot.customer.email = getValue('f3-customer-email');
-
-        // Note: We don't save generalNotes or termsConditions as they are not part of quoteData
+        // [REMOVED] No longer need to read from DOM. All data (quoteId, issueDate, customer, notes)
+        // is already present in the `dataWithSnapshot` object because F3 view updates state live.
+        // const getValue = (id) => document.getElementById(id)?.value || '';
+        // dataWithSnapshot.quoteId = getValue('f3-quote-id');
+        // ... (all other getValue calls removed)
 
         return dataWithSnapshot;
     }

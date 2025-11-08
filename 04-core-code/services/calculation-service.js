@@ -322,12 +322,12 @@ export class CalculationService {
     /**
      * [NEW] Gathers all necessary data for the quote template.
      * This method is the new home for the logic previously in QuoteGeneratorService._prepareTemplateData.
-     * @param {object} quoteData - The current quote data from the state.
+     * @param {object} quoteData - The *original* quote data from the state (used for items).
      * @param {object} ui - The current UI state.
-     * @param {object} f3Data - Data from the F3 form fields.
+     * @param {object} liveQuoteData - The *live, up-to-date* quoteData, passed from workflow service.
      * @returns {object} A comprehensive data object ready for template population.
      */
-    getQuoteTemplateData(quoteData, ui, f3Data) {
+    getQuoteTemplateData(quoteData, ui, liveQuoteData) {
         const summaryData = this.calculateF2Summary(quoteData, ui);
 
         // [MODIFIED] (Phase 4) Grand total is now derived from F2's newOffer state, not F3.
@@ -360,28 +360,29 @@ export class CalculationService {
         const cord3mQty = ui.driveCordCount || 0;
         const cord3mPrice = (this.configManager.getAccessoryPrice('cord3m') || 0) * cord3mQty;
 
+        // [MODIFIED] Read from the liveQuoteData object instead of f3Data(DOM)
         let documentTitleParts = [];
-        if (f3Data.quoteId) documentTitleParts.push(f3Data.quoteId);
-        if (f3Data.customerName) documentTitleParts.push(f3Data.customerName);
-        if (f3Data.customerPhone) documentTitleParts.push(f3Data.customerPhone);
+        if (liveQuoteData.quoteId) documentTitleParts.push(liveQuoteData.quoteId);
+        if (liveQuoteData.customer.name) documentTitleParts.push(liveQuoteData.customer.name);
+        if (liveQuoteData.customer.phone) documentTitleParts.push(liveQuoteData.customer.phone);
         const documentTitle = documentTitleParts.join(' ');
 
         return {
             documentTitle: documentTitle,
-            quoteId: f3Data.quoteId,
-            issueDate: f3Data.issueDate,
-            dueDate: f3Data.dueDate,
-            customerName: f3Data.customerName, // [NEW] Added for direct access in template
-            customerAddress: f3Data.customerAddress, // [NEW]
-            customerPhone: f3Data.customerPhone, // [NEW]
-            customerEmail: f3Data.customerEmail, // [NEW]
+            quoteId: liveQuoteData.quoteId,
+            issueDate: liveQuoteData.issueDate,
+            dueDate: liveQuoteData.dueDate,
+            customerName: liveQuoteData.customer.name, // [MODIFIED]
+            customerAddress: liveQuoteData.customer.address, // [MODIFIED]
+            customerPhone: liveQuoteData.customer.phone, // [MODIFIED]
+            customerEmail: liveQuoteData.customer.email, // [MODIFIED]
 
             // [MODIFIED] (Phase 4) All totals are now based on the new grandTotal
             subtotal: `$${(summaryData.sumPrice || 0).toFixed(2)}`,
             gst: `$${gstValue.toFixed(2)}`,
             grandTotal: `$${grandTotal.toFixed(2)}`,
 
-            // [FIX v6291] 問題 5: 確保 ourOffer 被正確傳遞
+            // [FIX v6291] ? é? 5: ç¢ºä? ourOffer è¢«æ­£ç¢ºå‚³??
             ourOffer: `$${newOfferValue.toFixed(2)}`,
 
             // [MODIFIED v6290 Task 3] Use correct values from F2 state
@@ -389,8 +390,8 @@ export class CalculationService {
             balance: `$${(balanceValue || 0).toFixed(2)}`,
 
             savings: `$${((summaryData.firstRbPrice || 0) - (summaryData.disRbPrice || 0)).toFixed(2)}`,
-            generalNotes: (f3Data.generalNotes || '').replace(/\n/g, '<br>'),
-            termsAndConditions: (f3Data.termsConditions || 'Standard terms and conditions apply.').replace(/\n/g, '<br>'),
+            generalNotes: (liveQuoteData.generalNotes || '').replace(/\n/g, '<br>'), // [MODIFIED]
+            termsAndConditions: (liveQuoteData.termsConditions || 'Standard terms and conditions apply.').replace(/\n/g, '<br>'), // [MODIFIED]
 
 
             // Data for the detailed list (Appendix)

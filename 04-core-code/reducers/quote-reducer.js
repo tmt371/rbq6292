@@ -25,7 +25,7 @@ function _consolidateEmptyRows(items, productFactory, productKey) {
         const productStrategy = productFactory.getProductStrategy(productKey);
         newItems.push(productStrategy.getInitialItemData());
     }
-    
+
     return newItems;
 }
 
@@ -40,7 +40,25 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
 
         case QUOTE_ACTION_TYPES.RESET_QUOTE_DATA:
             return JSON.parse(JSON.stringify(initialState.quoteData));
-        
+
+        // [NEW] Handle F3 field updates
+        case QUOTE_ACTION_TYPES.UPDATE_QUOTE_PROPERTY: {
+            const { key, value } = action.payload;
+            if (state[key] === value) return state;
+            return { ...state, [key]: value };
+        }
+        case QUOTE_ACTION_TYPES.UPDATE_CUSTOMER_PROPERTY: {
+            const { key, value } = action.payload;
+            if (state.customer[key] === value) return state;
+            return {
+                ...state,
+                customer: {
+                    ...state.customer,
+                    [key]: value
+                }
+            };
+        }
+
         case QUOTE_ACTION_TYPES.INSERT_ROW: {
             items = [...productData.items];
             const productStrategy = productFactory.getProductStrategy(productKey);
@@ -56,7 +74,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
             const itemToDelete = items[selectedIndex];
             if (!itemToDelete) return state;
 
-            const isLastPopulatedRow = selectedIndex === items.length - 2 && items.length > 1 && !items[items.length - 1].width && !items[items.length-1].height;
+            const isLastPopulatedRow = selectedIndex === items.length - 2 && items.length > 1 && !items[items.length - 1].width && !items[items.length - 1].height;
 
             if (isLastPopulatedRow || items.length === 1) {
                 const productStrategy = productFactory.getProductStrategy(productKey);
@@ -70,7 +88,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
             productData = { ...productData, items };
             return { ...state, products: { ...state.products, [productKey]: productData } };
         }
-        
+
         case QUOTE_ACTION_TYPES.CLEAR_ROW: {
             items = [...productData.items];
             const { selectedIndex } = action.payload;
@@ -91,7 +109,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
             const { rowIndex, column, value } = action.payload;
             const targetItem = items[rowIndex];
             if (!targetItem || targetItem[column] === value) return state;
-            
+
             const newItem = { ...targetItem, [column]: value };
 
             if ((column === 'width' || column === 'height') && newItem.width && newItem.height) {
@@ -105,7 +123,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
             productData = { ...productData, items };
             return { ...state, products: { ...state.products, [productKey]: productData } };
         }
-        
+
         case QUOTE_ACTION_TYPES.BATCH_UPDATE_PROPERTY: {
             items = productData.items.map((item, index) => {
                 if (index === productData.items.length - 1) {
@@ -139,7 +157,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
             productData = { ...productData, items };
             return { ...state, products: { ...state.products, [productKey]: productData } };
         }
-        
+
         case QUOTE_ACTION_TYPES.UPDATE_WINDER_MOTOR_PROPERTY: {
             items = [...productData.items];
             const { rowIndex, property, value } = action.payload;
@@ -149,13 +167,13 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
             const newItem = { ...item, [property]: value };
             if (property === 'winder' && value) newItem.motor = '';
             if (property === 'motor' && value) newItem.winder = '';
-            
+
             items[rowIndex] = newItem;
             productData = { ...productData, items };
             return { ...state, products: { ...state.products, [productKey]: productData } };
         }
 
-        
+
         case QUOTE_ACTION_TYPES.CYCLE_K3_PROPERTY: {
             items = [...productData.items];
             const { rowIndex, column } = action.payload;
@@ -211,7 +229,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
                 newItems = items;
             } else if (action.type === QUOTE_ACTION_TYPES.BATCH_UPDATE_FABRIC_TYPE) {
                 let { newType } = action.payload;
-                if (newType === undefined) { 
+                if (newType === undefined) {
                     const firstItem = items.find(item => item.width && item.height);
                     const currentType = firstItem ? (firstItem.fabricType || TYPE_SEQUENCE[TYPE_SEQUENCE.length - 1]) : TYPE_SEQUENCE[TYPE_SEQUENCE.length - 1];
                     const currentIndex = TYPE_SEQUENCE.indexOf(currentType);
@@ -273,7 +291,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
         case QUOTE_ACTION_TYPES.BATCH_UPDATE_PROPERTIES_FOR_INDEXES: {
             const { selectedIndexes, typeMap } = action.payload;
             const selectedIndexesSet = new Set(selectedIndexes);
-            
+
             // [NEW] Keep track of which indexes were actually modified
             const modifiedIndexesSet = new Set();
 
@@ -283,7 +301,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
                     const itemType = item.fabricType;
                     // Check if the typeMap has new data for this item's type
                     const newProps = typeMap[itemType];
-                    
+
                     if (newProps && (newProps.fabric !== undefined || newProps.color !== undefined)) {
                         // [NEW] This index is being modified
                         modifiedIndexesSet.add(index);
@@ -297,12 +315,12 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
                 // Return original item if not selected or no matching type in map
                 return item;
             });
-            
+
             // [FIX] If SSet modified any indexes, we must remove them from lfModifiedRowIndexes
             const newLfModifiedIndexes = state.uiMetadata.lfModifiedRowIndexes.filter(
                 index => !modifiedIndexesSet.has(index)
             );
-            
+
             const newUiMetadata = {
                 ...state.uiMetadata,
                 lfModifiedRowIndexes: newLfModifiedIndexes
@@ -330,7 +348,7 @@ export function quoteReducer(state, action, { productFactory, configManager }) {
             productData = { ...productData, summary: newSummary };
             return { ...state, products: { ...state.products, [productKey]: productData } };
         }
-        
+
         default:
             return state;
     }

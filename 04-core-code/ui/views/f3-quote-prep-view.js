@@ -1,6 +1,7 @@
 // File: 04-core-code/ui/views/f3-quote-prep-view.js
 
 import { EVENTS, DOM_IDS } from '../../config/constants.js';
+import * as quoteActions from '../../actions/quote-actions.js'; // [NEW] Import actions
 
 /**
  * @fileoverview A dedicated sub-view for handling all logic related to the F3 (Quote Prep) tab.
@@ -71,28 +72,58 @@ export class F3QuotePrepView {
     _initializeF3Listeners() {
         if (!this.f3.inputs.issueDate) return;
 
+        // [NEW] Helper to dispatch state updates on 'change' event
+        const addStateUpdateListener = (inputElement, actionCreator) => {
+            if (inputElement) {
+                inputElement.addEventListener('change', (event) => {
+                    this.stateService.dispatch(actionCreator(event.target.value));
+                });
+            }
+        };
+
+        // [NEW] Helper for customer properties
+        const addCustomerUpdateListener = (inputElement, key) => {
+            if (inputElement) {
+                inputElement.addEventListener('change', (event) => {
+                    this.stateService.dispatch(quoteActions.updateCustomerProperty(key, event.target.value));
+                });
+            }
+        };
+
+        // [NEW] Bind all F3 inputs to update state.
+        addStateUpdateListener(this.f3.inputs.quoteId, (value) => quoteActions.updateQuoteProperty('quoteId', value));
+        addStateUpdateListener(this.f3.inputs.generalNotes, (value) => quoteActions.updateQuoteProperty('generalNotes', value));
+        addStateUpdateListener(this.f3.inputs.termsConditions, (value) => quoteActions.updateQuoteProperty('termsConditions', value));
+
+        addCustomerUpdateListener(this.f3.inputs.customerName, 'name');
+        addCustomerUpdateListener(this.f3.inputs.customerAddress, 'address');
+        addCustomerUpdateListener(this.f3.inputs.customerPhone, 'phone');
+        addCustomerUpdateListener(this.f3.inputs.customerEmail, 'email');
+
+
         // --- [NEW] Mechanism 3: Listen for manual override on Due Date ---
         if (this.f3.inputs.dueDate) {
             this.f3.inputs.dueDate.addEventListener('input', () => {
                 this.userOverrodeDueDate = true;
             });
+            // Also dispatch its value change to state
+            addStateUpdateListener(this.f3.inputs.dueDate, (value) => quoteActions.updateQuoteProperty('dueDate', value));
         }
 
         // --- Date Chaining Logic (MODIFIED for Mechanism 3 & Timezone Fix) ---
         this.f3.inputs.issueDate.addEventListener('input', (event) => {
+            const issueDateValue = event.target.value;
+            // [NEW] Dispatch issueDate change to state
+            this.stateService.dispatch(quoteActions.updateQuoteProperty('issueDate', issueDateValue));
+
             // [MODIFIED] If user manually changed due date, stop live-updating.
             if (this.userOverrodeDueDate) return;
-
-            const issueDateValue = event.target.value;
 
             // [MODIFIED] Only proceed if we have a valid issue date.
             if (issueDateValue) {
                 // [FIX] Use new robust parser
                 const issueDate = this._parseDateFromYMD(issueDateValue);
                 if (!issueDate) return; // Invalid date input
-
-                // [FIX] Remove timezone offset bug
-                // issueDate.setMinutes(issueDate.getMinutes() + issueDate.getTimezoneOffset());
 
                 const dueDate = new Date(issueDate);
                 dueDate.setDate(dueDate.getDate() + 14);
@@ -107,7 +138,10 @@ export class F3QuotePrepView {
                 // [END NEW]
 
                 // [FIX] Use new robust formatter
-                this.f3.inputs.dueDate.value = this._formatDateToYMD(dueDate);
+                const dueDateString = this._formatDateToYMD(dueDate);
+                this.f3.inputs.dueDate.value = dueDateString;
+                // [NEW] Also dispatch the auto-calculated due date to state
+                this.stateService.dispatch(quoteActions.updateQuoteProperty('dueDate', dueDateString));
             }
         });
 
@@ -166,10 +200,10 @@ export class F3QuotePrepView {
 
         // [REMOVED] Old buggy formatDate helper is gone.
 
-        // Helper to update value only if it differs
+        // Helper to update value only if it differs AND element is not focused
         const updateInput = (input, newValue) => {
             const value = newValue || '';
-            if (input && input.value !== value) {
+            if (input && input.value !== value && document.activeElement !== input) {
                 input.value = value;
             }
         };
@@ -180,6 +214,8 @@ export class F3QuotePrepView {
         let dueDateStr = quoteData.dueDate;
         let issueDateObj; // To store the date object for due date calculation
 
+        let needsStateUpdate = false; // Flag to see if we generated new data
+
         // [MODIFIED] Mechanism 1: Restore Quote ID generation
         if (!quoteId) {
             const now = new Date();
@@ -188,12 +224,18 @@ export class F3QuotePrepView {
             const day = String(now.getDate()).padStart(2, '0');
             const hours = String(now.getHours()).padStart(2, '0');
             quoteId = `RB${year}${month}${day}${hours}`;
+            // [NEW] Dispatch this new value back to state
+            this.stateService.dispatch(quoteActions.updateQuoteProperty('quoteId', quoteId));
+            needsStateUpdate = true;
         }
 
         // [MODIFIED] Mechanism 2: Restore Issue Date generation (TIMEZONE-SAFE)
         if (!issueDateStr) {
             issueDateObj = new Date(); // Local "today"
             issueDateStr = this._formatDateToYMD(issueDateObj);
+            // [NEW] Dispatch this new value back to state
+            this.stateService.dispatch(quoteActions.updateQuoteProperty('issueDate', issueDateStr));
+            needsStateUpdate = true;
         } else {
             // It's a string, format it just in case, then parse it for logic
             issueDateStr = this._formatDateToYMD(this._parseDateFromYMD(issueDateStr));
@@ -217,6 +259,9 @@ export class F3QuotePrepView {
 
             dueDateStr = this._formatDateToYMD(dueDateObj);
             this.userOverrodeDueDate = false; // We just auto-generated it
+            // [NEW] Dispatch this new value back to state
+            this.stateService.dispatch(quoteActions.updateQuoteProperty('dueDate', dueDateStr));
+            needsStateUpdate = true;
         } else {
             // A due date was loaded from the state, format it and assume it was an override
             dueDateStr = this._formatDateToYMD(this._parseDateFromYMD(dueDateStr));
@@ -233,8 +278,9 @@ export class F3QuotePrepView {
         updateInput(this.f3.inputs.customerPhone, customer.phone);
         updateInput(this.f3.inputs.customerEmail, customer.email);
 
-        // Note: generalNotes, termsConditions are not part of state
-        // and retain their manually entered values.
+        // [NEW] Sync textareas from state
+        updateInput(this.f3.inputs.generalNotes, quoteData.generalNotes);
+        updateInput(this.f3.inputs.termsConditions, quoteData.termsConditions);
     }
 
     activate() {

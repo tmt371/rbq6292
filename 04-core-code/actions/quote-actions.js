@@ -16,6 +16,17 @@ export const resetQuoteData = () => ({
     type: QUOTE_ACTION_TYPES.RESET_QUOTE_DATA,
 });
 
+// --- [NEW] F3 Field Updates ---
+export const updateQuoteProperty = (key, value) => ({
+    type: QUOTE_ACTION_TYPES.UPDATE_QUOTE_PROPERTY,
+    payload: { key, value },
+});
+
+export const updateCustomerProperty = (key, value) => ({
+    type: QUOTE_ACTION_TYPES.UPDATE_CUSTOMER_PROPERTY,
+    payload: { key, value },
+});
+
 // --- Item Array Operations ---
 export const insertRow = (selectedIndex) => ({
     type: QUOTE_ACTION_TYPES.INSERT_ROW,

@@ -75,6 +75,10 @@ export const QUOTE_ACTION_TYPES = {
     SET_QUOTE_DATA: 'quote/setQuoteData',
     RESET_QUOTE_DATA: 'quote/resetQuoteData',
 
+    // [NEW] F3 Field Updates
+    UPDATE_QUOTE_PROPERTY: 'quote/updateQuoteProperty',
+    UPDATE_CUSTOMER_PROPERTY: 'quote/updateCustomerProperty',
+
     // Item Array Operations
     INSERT_ROW: 'quote/insertRow',
     DELETE_ROW: 'quote/deleteRow',
