@@ -10,6 +10,7 @@ export class F3QuotePrepView {
         this.panelElement = panelElement;
         this.eventAggregator = eventAggregator;
         this.stateService = stateService; // [NEW] Store stateService
+        this.userOverrodeDueDate = false; // [NEW] Mechanism 3 flag
 
         this._cacheF3Elements();
         this._initializeF3Listeners();
@@ -41,16 +42,37 @@ export class F3QuotePrepView {
     _initializeF3Listeners() {
         if (!this.f3.inputs.issueDate) return;
 
-        // --- Date Chaining Logic ---
+        // --- [NEW] Mechanism 3: Listen for manual override on Due Date ---
+        if (this.f3.inputs.dueDate) {
+            this.f3.inputs.dueDate.addEventListener('input', () => {
+                this.userOverrodeDueDate = true;
+            });
+        }
+
+        // --- Date Chaining Logic (MODIFIED for Mechanism 3) ---
         this.f3.inputs.issueDate.addEventListener('input', (event) => {
+            // [MODIFIED] If user manually changed due date, stop live-updating.
+            if (this.userOverrodeDueDate) return;
+
             const issueDateValue = event.target.value;
-            if (issueDateValue && !this.f3.inputs.dueDate.value) { // Only auto-fill if due date is empty
+
+            // [MODIFIED] Only proceed if we have a valid issue date.
+            if (issueDateValue) {
                 const issueDate = new Date(issueDateValue);
                 // Adjust for timezone offset to prevent day-before issues
                 issueDate.setMinutes(issueDate.getMinutes() + issueDate.getTimezoneOffset());
 
                 const dueDate = new Date(issueDate);
                 dueDate.setDate(dueDate.getDate() + 14);
+
+                // [NEW] Mechanism 3: Skip weekends
+                const dayOfWeek = dueDate.getDay(); // 0 = Sun, 6 = Sat
+                if (dayOfWeek === 6) { // Saturday
+                    dueDate.setDate(dueDate.getDate() + 2);
+                } else if (dayOfWeek === 0) { // Sunday
+                    dueDate.setDate(dueDate.getDate() + 1);
+                }
+                // [END NEW]
 
                 const year = dueDate.getFullYear();
                 const month = String(dueDate.getMonth() + 1).padStart(2, '0');
@@ -113,15 +135,15 @@ export class F3QuotePrepView {
         const { customer } = quoteData;
 
         // Helper to format date strings (YYYY-MM-DD)
-        const formatDate = (dateString) => {
-            if (!dateString) return '';
+        const formatDate = (dateStringOrObj) => {
+            if (!dateStringOrObj) return '';
             try {
-                const date = new Date(dateString);
+                const date = new Date(dateStringOrObj);
                 // Adjust for timezone offset
                 date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
                 return date.toISOString().split('T')[0];
             } catch (e) {
-                return dateString; // Fallback to whatever was saved
+                return String(dateStringOrObj); // Fallback to whatever was saved
             }
         };
 
@@ -137,7 +159,9 @@ export class F3QuotePrepView {
         let quoteId = quoteData.quoteId;
         let issueDate = quoteData.issueDate;
         let dueDate = quoteData.dueDate;
+        let issueDateObj; // To store the date object for due date calculation
 
+        // [MODIFIED] Mechanism 1: Restore Quote ID generation
         if (!quoteId) {
             const now = new Date();
             const year = now.getFullYear();
@@ -146,27 +170,48 @@ export class F3QuotePrepView {
             const hours = String(now.getHours()).padStart(2, '0');
             quoteId = `RB${year}${month}${day}${hours}`;
         }
+
+        // [MODIFIED] Mechanism 2: Restore Issue Date generation
         if (!issueDate) {
-            issueDate = formatDate(new Date());
+            issueDateObj = new Date();
+            issueDate = formatDate(issueDateObj);
+        } else {
+            issueDateObj = new Date(issueDate);
         }
+
+        // [MODIFIED] Mechanism 3: Restore Due Date generation (with weekend skip)
         if (!dueDate) {
-            const issueDateObj = new Date(issueDate);
+            // Use the (potentially new) issueDate object
             issueDateObj.setMinutes(issueDateObj.getMinutes() + issueDateObj.getTimezoneOffset());
-            issueDateObj.setDate(issueDateObj.getDate() + 14);
-            dueDate = formatDate(issueDateObj);
+            const dueDateObj = new Date(issueDateObj);
+            dueDateObj.setDate(dueDateObj.getDate() + 14);
+
+            // [NEW] Mechanism 3: Skip weekends
+            const dayOfWeek = dueDateObj.getDay(); // 0 = Sun, 6 = Sat
+            if (dayOfWeek === 6) { // Saturday
+                dueDateObj.setDate(dueDateObj.getDate() + 2);
+            } else if (dayOfWeek === 0) { // Sunday
+                dueDateObj.setDate(dueDateObj.getDate() + 1);
+            }
+
+            dueDate = formatDate(dueDateObj);
+            this.userOverrodeDueDate = false; // We just auto-generated it
+        } else {
+            // A due date was loaded from the state, assume it was an override
+            this.userOverrodeDueDate = true;
         }
 
         // --- 2. Sync all inputs with state ---
         updateInput(this.f3.inputs.quoteId, quoteId);
-        updateInput(this.f3.inputs.issueDate, formatDate(issueDate));
-        updateInput(this.f3.inputs.dueDate, formatDate(dueDate));
+        updateInput(this.f3.inputs.issueDate, formatDate(issueDate)); // Format just in case
+        updateInput(this.f3.inputs.dueDate, formatDate(dueDate)); // Format just in case
 
         updateInput(this.f3.inputs.customerName, customer.name);
         updateInput(this.f3.inputs.customerAddress, customer.address);
         updateInput(this.f3.inputs.customerPhone, customer.phone);
         updateInput(this.f3.inputs.customerEmail, customer.email);
 
-        // Note: finalOfferPrice, generalNotes, termsConditions are not part of state
+        // Note: generalNotes, termsConditions are not part of state
         // and retain their manually entered values.
     }
 
