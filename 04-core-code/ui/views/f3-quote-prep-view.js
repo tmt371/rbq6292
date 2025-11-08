@@ -17,6 +17,35 @@ export class F3QuotePrepView {
         console.log("F3QuotePrepView Initialized.");
     }
 
+    // [NEW] Robust helper to format a Date object to "YYYY-MM-DD" in LOCAL time.
+    _formatDateToYMD(date) {
+        if (!date) return '';
+        try {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        } catch (e) {
+            return '';
+        }
+    }
+
+    // [NEW] Robust helper to parse a "YYYY-MM-DD" string into a Date object at local noon.
+    // This avoids all timezone-related "day-before" issues.
+    _parseDateFromYMD(dateString) {
+        if (!dateString) return null;
+        try {
+            const parts = dateString.split('-');
+            if (parts.length === 3) {
+                // Create date at 12:00 (noon) local time to prevent TZ shifts from rolling it back.
+                return new Date(parts[0], parts[1] - 1, parts[2], 12, 0, 0);
+            }
+            return new Date(dateString); // Fallback
+        } catch (e) {
+            return null;
+        }
+    }
+
     _cacheF3Elements() {
         const query = (id) => this.panelElement.querySelector(id);
         this.f3 = {
@@ -49,7 +78,7 @@ export class F3QuotePrepView {
             });
         }
 
-        // --- Date Chaining Logic (MODIFIED for Mechanism 3) ---
+        // --- Date Chaining Logic (MODIFIED for Mechanism 3 & Timezone Fix) ---
         this.f3.inputs.issueDate.addEventListener('input', (event) => {
             // [MODIFIED] If user manually changed due date, stop live-updating.
             if (this.userOverrodeDueDate) return;
@@ -58,9 +87,12 @@ export class F3QuotePrepView {
 
             // [MODIFIED] Only proceed if we have a valid issue date.
             if (issueDateValue) {
-                const issueDate = new Date(issueDateValue);
-                // Adjust for timezone offset to prevent day-before issues
-                issueDate.setMinutes(issueDate.getMinutes() + issueDate.getTimezoneOffset());
+                // [FIX] Use new robust parser
+                const issueDate = this._parseDateFromYMD(issueDateValue);
+                if (!issueDate) return; // Invalid date input
+
+                // [FIX] Remove timezone offset bug
+                // issueDate.setMinutes(issueDate.getMinutes() + issueDate.getTimezoneOffset());
 
                 const dueDate = new Date(issueDate);
                 dueDate.setDate(dueDate.getDate() + 14);
@@ -74,11 +106,8 @@ export class F3QuotePrepView {
                 }
                 // [END NEW]
 
-                const year = dueDate.getFullYear();
-                const month = String(dueDate.getMonth() + 1).padStart(2, '0');
-                const day = String(dueDate.getDate()).padStart(2, '0');
-
-                this.f3.inputs.dueDate.value = `${year}-${month}-${day}`;
+                // [FIX] Use new robust formatter
+                this.f3.inputs.dueDate.value = this._formatDateToYMD(dueDate);
             }
         });
 
@@ -128,24 +157,14 @@ export class F3QuotePrepView {
     }
 
     // [MODIFIED v6285 Phase 5] Render now fully syncs from state.
+    // [MODIFIED v6292] Complete rewrite to fix all timezone bugs.
     render(state) {
         if (!this.f3.inputs.quoteId || !state) return;
 
         const { quoteData } = state;
         const { customer } = quoteData;
 
-        // Helper to format date strings (YYYY-MM-DD)
-        const formatDate = (dateStringOrObj) => {
-            if (!dateStringOrObj) return '';
-            try {
-                const date = new Date(dateStringOrObj);
-                // Adjust for timezone offset
-                date.setMinutes(date.getMinutes() + date.getTimezoneOffset());
-                return date.toISOString().split('T')[0];
-            } catch (e) {
-                return String(dateStringOrObj); // Fallback to whatever was saved
-            }
-        };
+        // [REMOVED] Old buggy formatDate helper is gone.
 
         // Helper to update value only if it differs
         const updateInput = (input, newValue) => {
@@ -157,8 +176,8 @@ export class F3QuotePrepView {
 
         // --- 1. Populate Defaults (if state is empty) ---
         let quoteId = quoteData.quoteId;
-        let issueDate = quoteData.issueDate;
-        let dueDate = quoteData.dueDate;
+        let issueDateStr = quoteData.issueDate;
+        let dueDateStr = quoteData.dueDate;
         let issueDateObj; // To store the date object for due date calculation
 
         // [MODIFIED] Mechanism 1: Restore Quote ID generation
@@ -171,19 +190,21 @@ export class F3QuotePrepView {
             quoteId = `RB${year}${month}${day}${hours}`;
         }
 
-        // [MODIFIED] Mechanism 2: Restore Issue Date generation
-        if (!issueDate) {
-            issueDateObj = new Date();
-            issueDate = formatDate(issueDateObj);
+        // [MODIFIED] Mechanism 2: Restore Issue Date generation (TIMEZONE-SAFE)
+        if (!issueDateStr) {
+            issueDateObj = new Date(); // Local "today"
+            issueDateStr = this._formatDateToYMD(issueDateObj);
         } else {
-            issueDateObj = new Date(issueDate);
+            // It's a string, format it just in case, then parse it for logic
+            issueDateStr = this._formatDateToYMD(this._parseDateFromYMD(issueDateStr));
+            issueDateObj = this._parseDateFromYMD(issueDateStr);
         }
 
-        // [MODIFIED] Mechanism 3: Restore Due Date generation (with weekend skip)
-        if (!dueDate) {
+        // [MODIFIED] Mechanism 3: Restore Due Date generation (TIMEZONE-SAFE)
+        if (!dueDateStr) {
             // Use the (potentially new) issueDate object
-            issueDateObj.setMinutes(issueDateObj.getMinutes() + issueDateObj.getTimezoneOffset());
-            const dueDateObj = new Date(issueDateObj);
+            // [FIX] Remove timezone offset bug
+            const dueDateObj = new Date(issueDateObj); // Start from the clean issueDate
             dueDateObj.setDate(dueDateObj.getDate() + 14);
 
             // [NEW] Mechanism 3: Skip weekends
@@ -194,17 +215,18 @@ export class F3QuotePrepView {
                 dueDateObj.setDate(dueDateObj.getDate() + 1);
             }
 
-            dueDate = formatDate(dueDateObj);
+            dueDateStr = this._formatDateToYMD(dueDateObj);
             this.userOverrodeDueDate = false; // We just auto-generated it
         } else {
-            // A due date was loaded from the state, assume it was an override
+            // A due date was loaded from the state, format it and assume it was an override
+            dueDateStr = this._formatDateToYMD(this._parseDateFromYMD(dueDateStr));
             this.userOverrodeDueDate = true;
         }
 
-        // --- 2. Sync all inputs with state ---
+        // --- 2. Sync all inputs with state (NO MORE DOUBLE FORMATTING) ---
         updateInput(this.f3.inputs.quoteId, quoteId);
-        updateInput(this.f3.inputs.issueDate, formatDate(issueDate)); // Format just in case
-        updateInput(this.f3.inputs.dueDate, formatDate(dueDate)); // Format just in case
+        updateInput(this.f3.inputs.issueDate, issueDateStr);
+        updateInput(this.f3.inputs.dueDate, dueDateStr);
 
         updateInput(this.f3.inputs.customerName, customer.name);
         updateInput(this.f3.inputs.customerAddress, customer.address);
