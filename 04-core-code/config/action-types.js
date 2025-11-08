@@ -56,6 +56,8 @@ export const UI_ACTION_TYPES = {
     SET_F1_REMOTE_DISTRIBUTION: 'ui/setF1RemoteDistribution',
     SET_F1_DUAL_DISTRIBUTION: 'ui/setF1DualDistribution',
     SET_F1_DISCOUNT_PERCENTAGE: 'ui/setF1DiscountPercentage',
+    // [NEW] (F1/F2 Refactor Phase 1) Add action for F1 cost totals
+    SET_F1_COST_TOTALS: 'ui/setF1CostTotals',
 
     // F2 Financial Summary State
     SET_F2_VALUE: 'ui/setF2Value',

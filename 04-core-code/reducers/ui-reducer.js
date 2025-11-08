@@ -121,6 +121,18 @@ export function uiReducer(state, action) {
             return { ...state, f1: { ...state.f1, dual_combo_qty: action.payload.comboQty, dual_slim_qty: action.payload.slimQty } };
         case UI_ACTION_TYPES.SET_F1_DISCOUNT_PERCENTAGE:
             return { ...state, f1: { ...state.f1, discountPercentage: action.payload.percentage } };
+
+        // [NEW] (F1/F2 Refactor Phase 1) Handle setting F1 cost totals
+        case UI_ACTION_TYPES.SET_F1_COST_TOTALS:
+            return {
+                ...state,
+                f1: {
+                    ...state.f1,
+                    f1_subTotal: action.payload.subTotal,
+                    f1_finalTotal: action.payload.finalTotal
+                }
+            };
+
         case UI_ACTION_TYPES.SET_F2_VALUE: {
             const { key, value } = action.payload;
             if (state.f2.hasOwnProperty(key)) {

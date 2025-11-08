@@ -68,6 +68,9 @@ export const initialState = {
             remote_16ch_qty: null,
             dual_combo_qty: null,
             dual_slim_qty: null,
+            // [NEW] (F1/F2 Refactor Phase 1) Add state to store F1 cost totals
+            f1_subTotal: null,
+            f1_finalTotal: null,
         },
 
 

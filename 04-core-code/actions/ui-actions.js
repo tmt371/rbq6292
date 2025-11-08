@@ -171,7 +171,7 @@ export const setSummaryAccessoriesTotal = (price) => ({
 });
 
 
-// --- F1/F2 State ---
+// --- F1 Financial Overview State ---
 export const setF1RemoteDistribution = (qty1, qty16) => ({
     type: UI_ACTION_TYPES.SET_F1_REMOTE_DISTRIBUTION,
     payload: { qty1, qty16 },
@@ -187,6 +187,13 @@ export const setF1DiscountPercentage = (percentage) => ({
     payload: { percentage },
 });
 
+// [NEW] (F1/F2 Refactor Phase 1) Add action creator for F1 cost totals
+export const setF1CostTotals = (subTotal, finalTotal) => ({
+    type: UI_ACTION_TYPES.SET_F1_COST_TOTALS,
+    payload: { subTotal, finalTotal },
+});
+
+// --- F2 State ---
 export const setF2Value = (key, value) => ({
     type: UI_ACTION_TYPES.SET_F2_VALUE,
     payload: { key, value },
