@@ -35,7 +35,8 @@ export class WorkflowService {
 
             // [REFACTORED] Delegate the entire HTML generation process to the new service.
             // [MODIFIED] Pass the live quoteData object as the f3Data parameter.
-            const finalHtml = this.quoteGeneratorService.generateQuoteHtml(quoteData, ui, quoteData);
+            // [FIX] Added 'await' to resolve the Promise returned by the async function.
+            const finalHtml = await this.quoteGeneratorService.generateQuoteHtml(quoteData, ui, quoteData);
 
             if (finalHtml) {
                 // [MODIFIED] Phase 2: Replace the old iframe event with the new window.open mechanism.
@@ -66,7 +67,8 @@ export class WorkflowService {
 
             // Call the new service method for the GTH template
             // [MODIFIED] Pass the live quoteData object as the f3Data parameter.
-            const finalHtml = this.quoteGeneratorService.generateGmailQuoteHtml(quoteData, ui, quoteData);
+            // [FIX] Added 'await' to resolve the Promise returned by the async function.
+            const finalHtml = await this.quoteGeneratorService.generateGmailQuoteHtml(quoteData, ui, quoteData);
 
             if (finalHtml) {
                 // Open the generated HTML in a new tab
